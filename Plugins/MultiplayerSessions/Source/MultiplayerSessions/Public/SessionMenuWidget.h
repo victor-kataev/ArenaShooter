@@ -22,6 +22,10 @@ protected:
 	virtual bool Initialize() override;
 	virtual void OnLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld) override;
 
+	// callbacks for the custom delegates on the multiplayersessionssubsystem
+	UFUNCTION()
+	void OnCreateSession(bool bWasSuccessful);
+
 private:
 
 	UPROPERTY(meta = (BindWidget))
