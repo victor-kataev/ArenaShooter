@@ -34,11 +34,7 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FS
 	auto ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
 	if (ExistingSession != nullptr)
 	{
-		bCreateSessionOnDestroy = true;
-		LastNumPublicConnections = NumPublicConnections;
-		LastMatchType = MatchType;
-
-		DestroySession();
+		SessionInterface->DestroySession(NAME_GameSession);
 	}
 
 	// Store the delegate in a FDelegateHandle so we can later remove it from the delegate list
@@ -51,6 +47,7 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FS
 	LastSessionSettings->bAllowJoinViaPresence = true;
 	LastSessionSettings->bShouldAdvertise = true;
 	LastSessionSettings->bUsesPresence = true;
+	LastSessionSettings->bUseLobbiesIfAvailable = true;
 	LastSessionSettings->Set(FName("MatchType"), MatchType, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	LastSessionSettings->BuildUniqueId = 1;
 

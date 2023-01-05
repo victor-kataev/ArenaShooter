@@ -52,7 +52,7 @@ protected:
 
 private:
 	IOnlineSessionPtr SessionInterface;
-	TSharedPtr<FOnlineSessionSettings> SessionSettingsOfLastSession;
+	TSharedPtr<FOnlineSessionSettings> LastSessionSettings;
 	TSharedPtr<FOnlineSessionSearch> LastSessionSearch;
 	
 	//
