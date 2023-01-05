@@ -3,5 +3,6 @@
 Binaries/
 Intermediate/
 Saved/
+Build/
 
 *.sln
