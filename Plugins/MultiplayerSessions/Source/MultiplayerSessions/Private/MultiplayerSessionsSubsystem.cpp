@@ -32,27 +32,34 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FS
 	}
 
 	auto ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
-	if (ExistingSession)
+	if (ExistingSession != nullptr)
 	{
-		SessionInterface->DestroySession(NAME_GameSession);
+		bCreateSessionOnDestroy = true;
+		LastNumPublicConnections = NumPublicConnections;
+		LastMatchType = MatchType;
+
+		DestroySession();
 	}
 
+	// Store the delegate in a FDelegateHandle so we can later remove it from the delegate list
 	CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegate);
 
-	SessionSettingsOfLastSession = MakeShareable(new FOnlineSessionSettings());
-	SessionSettingsOfLastSession->bIsLANMatch = IOnlineSubsystem::Get()->GetSubsystemName() == "NULL" ? true : false;
-	SessionSettingsOfLastSession->NumPublicConnections = NumPublicConnections;
-	SessionSettingsOfLastSession->bAllowJoinInProgress = true;
-	SessionSettingsOfLastSession->bAllowJoinViaPresence = true;
-	SessionSettingsOfLastSession->bShouldAdvertise = true;
-	SessionSettingsOfLastSession->bUsesPresence = true;
-	SessionSettingsOfLastSession->Set(FName("MatchType"), MatchType, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	LastSessionSettings = MakeShareable(new FOnlineSessionSettings());
+	LastSessionSettings->bIsLANMatch = IOnlineSubsystem::Get()->GetSubsystemName() == "NULL" ? true : false;
+	LastSessionSettings->NumPublicConnections = NumPublicConnections;
+	LastSessionSettings->bAllowJoinInProgress = true;
+	LastSessionSettings->bAllowJoinViaPresence = true;
+	LastSessionSettings->bShouldAdvertise = true;
+	LastSessionSettings->bUsesPresence = true;
+	LastSessionSettings->Set(FName("MatchType"), MatchType, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	LastSessionSettings->BuildUniqueId = 1;
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettingsOfLastSession))
+	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *LastSessionSettings))
 	{
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
 
+		// Broadcast our own custom delegate
 		MultiplayerOnCreateSessionComplete.Broadcast(false);
 	}
 }
@@ -61,6 +68,10 @@ void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResult)
 {
 	if (!SessionInterface.IsValid())
 	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: FindSessions::Session interface is not valid"));
+		}
 		return;
 	}
 
@@ -83,6 +94,10 @@ void UMultiplayerSessionsSubsystem::JoinSession(const FOnlineSessionSearchResult
 {
 	if (!SessionInterface.IsValid())
 	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: JoinSessioin::SessionInterface is not valid"));
+		}
 		MultiplayerOnJoinSessionComplete.Broadcast(EOnJoinSessionCompleteResult::UnknownError);
 		return;
 	}
@@ -125,6 +140,11 @@ void UMultiplayerSessionsSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 
 	if (LastSessionSearch->SearchResults.Num() <= 0)
 	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: OnFindSessionsComplete::SearchResult is 0"));
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, FString::Printf(TEXT("bWasSuccessful %d"), bWasSuccessful));
+		}
 		MultiplayerOnFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(), false);
 		return;
 	}

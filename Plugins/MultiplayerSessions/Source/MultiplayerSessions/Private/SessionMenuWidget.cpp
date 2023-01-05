@@ -102,6 +102,19 @@ void USessionMenuWidget::OnFindSessions(const TArray<FOnlineSessionSearchResult>
 {
 	if (MultiplayerSessionsSubsystem == nullptr)
 	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: OnFindSessions::MultiplayerSubsystem is not valid"));
+		}
+		return;
+	}
+
+	if (!bWasSuccessful)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: OnFindSessions::Unable to find session"));
+		}
 		return;
 	}
 
@@ -114,6 +127,11 @@ void USessionMenuWidget::OnFindSessions(const TArray<FOnlineSessionSearchResult>
 			MultiplayerSessionsSubsystem->JoinSession(Result);
 			return;
 		}
+	}
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: OnFindSessions::Did not find any session to join"));
 	}
 }
 
@@ -133,6 +151,27 @@ void USessionMenuWidget::OnJoinSession(EOnJoinSessionCompleteResult::Type Result
 			{
 				PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
 			}
+			else
+			{
+				if (GEngine)
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: OnJoinSession::PlayerController is not valid"));
+				}
+			}
+		}
+		else
+		{
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: OnJoinSession::SessionInterface is not valid"));
+			}
+		}
+	}
+	else
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: OnJoinSession::OnlineSubsystem is not valid"));
 		}
 	}
 }
@@ -158,6 +197,13 @@ void USessionMenuWidget::JoinButtonClicked()
 	if (MultiplayerSessionsSubsystem)
 	{
 		MultiplayerSessionsSubsystem->FindSessions(10000);
+	}
+	else
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: Unable to find session"));
+		}
 	}
 }
 
