@@ -29,6 +29,16 @@ void ALobbyGameMode::PostLogin(APlayerController* NewPlayer)
 												FString::Printf(TEXT("%s has joined"), *PlayerName));
 			}
 		}
+
+		if (NumberOfPlayers == 3)
+		{
+			UWorld* World = GetWorld();
+			if (World)
+			{
+				bUseSeamlessTravel = true;
+				World->ServerTravel("/Game/Maps/ArenaMap?listen");
+			}
+		}
 	}
 }
 
@@ -61,14 +71,6 @@ void ALobbyGameMode::Logout(AController* Exiting)
 					FString::Printf(TEXT("%s has left"), *PlayerName));
 			}
 		}
-		if (NumberOfPlayers == 3)
-		{
-			UWorld* World = GetWorld();
-			if (World)
-			{
-				bUseSeamlessTravel = true;
-				World->ServerTravel("/Game/Maps/ArenaMap?listen");
-			}
-		}
+	
 	}
 }
