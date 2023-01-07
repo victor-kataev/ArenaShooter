@@ -35,6 +35,11 @@ void ALobbyGameMode::PostLogin(APlayerController* NewPlayer)
 void ALobbyGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
+	
+	GEngine->AddOnScreenDebugMessage(1,
+		10.f,
+		FColor::Cyan,
+		FString::Printf(TEXT("Logout called")));
 
 	if (GameState)
 	{
@@ -54,6 +59,15 @@ void ALobbyGameMode::Logout(AController* Exiting)
 					10.f,
 					FColor::Cyan,
 					FString::Printf(TEXT("%s has left"), *PlayerName));
+			}
+		}
+		if (NumberOfPlayers == 3)
+		{
+			UWorld* World = GetWorld();
+			if (World)
+			{
+				bUseSeamlessTravel = true;
+				World->ServerTravel("/Game/Maps/ArenaMap?listen");
 			}
 		}
 	}

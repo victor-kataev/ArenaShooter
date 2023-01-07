@@ -6,10 +6,11 @@
 #include "MultiplayerSessionsSubsystem.h"
 #include "OnlineSubsystem.h"
 
-void USessionMenuWidget::MenuSetup(int32 NumberOfPublicConnections, FString TypeOfMatch)
+void USessionMenuWidget::MenuSetup(int32 NumberOfPublicConnections, FString TypeOfMatch, FString PathToMap)
 {
 	NumPublicConnections = NumberOfPublicConnections;
 	MatchType = TypeOfMatch;
+	MapPath = PathToMap;
 	AddToViewport();
 	SetVisibility(ESlateVisibility::Visible);
 	bIsFocusable = true;
@@ -77,7 +78,8 @@ void USessionMenuWidget::OnCreateSession(bool bWasSuccessful)
 		UWorld* World = GetWorld();
 		if (World)
 		{
-			World->ServerTravel("/Game/ThirdPersonCPP/Maps/Lobby?listen");
+			
+			World->ServerTravel(FString::Printf(TEXT("%s?listen"), *MapPath));
 		}
 
 		if (GEngine)
