@@ -78,10 +78,6 @@ void USessionMenuWidget::OnCreateSession(bool bWasSuccessful)
 		if (World)
 		{
 			World->ServerTravel("/Game/ThirdPersonCPP/Maps/Lobby?listen");
-			if (GEngine)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("Host button clicked!"));
-			}
 		}
 
 		if (GEngine)
@@ -95,6 +91,7 @@ void USessionMenuWidget::OnCreateSession(bool bWasSuccessful)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("Failed to create session!"));
 		}
+		HostButton->SetIsEnabled(true);
 	}
 }
 
@@ -109,13 +106,21 @@ void USessionMenuWidget::OnFindSessions(const TArray<FOnlineSessionSearchResult>
 		return;
 	}
 
-	if (!bWasSuccessful)
+	/*if (!bWasSuccessful)
 	{
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: OnFindSessions::Unable to find session"));
 		}
 		return;
+	}*/
+
+	if (!bWasSuccessful || SessionResults.Num() == 0)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, TEXT("ERROR: OnFindSessions::Did not find any session to join"));
+		}
 	}
 
 	for (auto Result : SessionResults)
@@ -131,8 +136,9 @@ void USessionMenuWidget::OnFindSessions(const TArray<FOnlineSessionSearchResult>
 
 	if (GEngine)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: OnFindSessions::Did not find any session to join"));
+		GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, TEXT("No sesssions to join to"));
 	}
+	JoinButton->SetIsEnabled(true);
 }
 
 void USessionMenuWidget::OnJoinSession(EOnJoinSessionCompleteResult::Type Result)
@@ -174,6 +180,10 @@ void USessionMenuWidget::OnJoinSession(EOnJoinSessionCompleteResult::Type Result
 			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Blue, TEXT("ERROR: OnJoinSession::OnlineSubsystem is not valid"));
 		}
 	}
+	if (Result != EOnJoinSessionCompleteResult::Success)
+	{
+		JoinButton->SetIsEnabled(true);
+	}
 }
 
 void USessionMenuWidget::OnDestroySession(bool bWasSuccessful)
@@ -186,6 +196,7 @@ void USessionMenuWidget::OnStartSession(bool bWasSuccessful)
 
 void USessionMenuWidget::HostButtonClicked()
 {
+	HostButton->SetIsEnabled(false);
 	if (MultiplayerSessionsSubsystem)
 	{
 		MultiplayerSessionsSubsystem->CreateSession(NumPublicConnections, MatchType);
@@ -194,6 +205,7 @@ void USessionMenuWidget::HostButtonClicked()
 
 void USessionMenuWidget::JoinButtonClicked()
 {
+	JoinButton->SetIsEnabled(false);
 	if (MultiplayerSessionsSubsystem)
 	{
 		MultiplayerSessionsSubsystem->FindSessions(10000);
