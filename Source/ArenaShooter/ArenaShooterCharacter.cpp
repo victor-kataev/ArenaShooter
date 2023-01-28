@@ -10,6 +10,9 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "HUD/OverheadWidget.h"
 #include "Components/WidgetComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "Weapon/Weapon.h"
+#include "CharacterComponents/CombatComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AArenaShooterCharacter
@@ -45,10 +48,11 @@ AArenaShooterCharacter::AArenaShooterCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 	OverheadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
 	OverheadWidget->SetupAttachment(RootComponent);
+
+	CombatComp = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+	CombatComp->SetIsReplicated(true);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -60,46 +64,113 @@ void AArenaShooterCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 	check(PlayerInputComponent);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+	PlayerInputComponent->BindAction("Equip", IE_Pressed, this, &AArenaShooterCharacter::EquipButtonPressed);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AArenaShooterCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AArenaShooterCharacter::MoveRight);
 
-	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
-	// "turn" handles devices that provide an absolute delta, such as a mouse.
-	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("TurnRate", this, &AArenaShooterCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AArenaShooterCharacter::LookUpAtRate);
 
-	// handle touch devices
-	PlayerInputComponent->BindTouch(IE_Pressed, this, &AArenaShooterCharacter::TouchStarted);
-	PlayerInputComponent->BindTouch(IE_Released, this, &AArenaShooterCharacter::TouchStopped);
+	PlayerInputComponent->BindAction("Aim", IE_Pressed, this, &AArenaShooterCharacter::AimButtonPressed);
+	PlayerInputComponent->BindAction("Aim", IE_Released, this, &AArenaShooterCharacter::AimButtonReleased);
+}
 
-	// VR headset functionality
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AArenaShooterCharacter::OnResetVR);
+void AArenaShooterCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon)
+{
+	if (OverlappingWeapon)
+	{
+		OverlappingWeapon->ShowPickupWidget(true);
+	}
+		GEngine->AddOnScreenDebugMessage(4, 15.f, FColor::Blue, FString::Printf(TEXT("Replicated")));
+	if (LastWeapon)
+	{
+		LastWeapon->ShowPickupWidget(false);
+	}
+}
+
+void AArenaShooterCharacter::ServerEquipButtonPressed_Implementation()
+{
+	if (CombatComp)
+	{
+		CombatComp->Equip(OverlappingWeapon);
+	}
+}
+
+void AArenaShooterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
+{
+	if (OverlappingWeapon)
+	{
+		OverlappingWeapon->ShowPickupWidget(false);
+	}
+	OverlappingWeapon = Weapon;
+	if (IsLocallyControlled())
+	{
+		if (OverlappingWeapon)
+		{
+			OverlappingWeapon->ShowPickupWidget(true);
+		}
+	}
+}
+
+bool AArenaShooterCharacter::IsAiming() const
+{
+	return CombatComp && CombatComp->bAiming;
+}
+
+void AArenaShooterCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+}
+
+void AArenaShooterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME_CONDITION(AArenaShooterCharacter, OverlappingWeapon, COND_OwnerOnly);
+}
+
+void AArenaShooterCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	if (CombatComp)
+	{
+		CombatComp->Character = this;
+	}
 }
 
 
-void AArenaShooterCharacter::OnResetVR()
+void AArenaShooterCharacter::EquipButtonPressed()
 {
-	// If ArenaShooter is added to a project via 'Add Feature' in the Unreal Editor the dependency on HeadMountedDisplay in ArenaShooter.Build.cs is not automatically propagated
-	// and a linker error will result.
-	// You will need to either:
-	//		Add "HeadMountedDisplay" to [YourProject].Build.cs PublicDependencyModuleNames in order to build successfully (appropriate if supporting VR).
-	// or:
-	//		Comment or delete the call to ResetOrientationAndPosition below (appropriate if not supporting VR)
-	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
+	if (CombatComp)
+	{
+		if (HasAuthority())
+		{
+			CombatComp->Equip(OverlappingWeapon);
+		}
+		else
+		{
+			ServerEquipButtonPressed();
+		}
+	}
 }
 
-void AArenaShooterCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
+void AArenaShooterCharacter::AimButtonPressed()
 {
-		Jump();
+	if (CombatComp)
+	{
+		CombatComp->SetAiming(true);
+	}
 }
 
-void AArenaShooterCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
+void AArenaShooterCharacter::AimButtonReleased()
 {
-		StopJumping();
+	if (CombatComp)
+	{
+		CombatComp->SetAiming(false);
+	}
 }
 
 void AArenaShooterCharacter::TurnAtRate(float Rate)
