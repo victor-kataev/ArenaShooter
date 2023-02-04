@@ -4,6 +4,7 @@
 #include "CharacterAnimInstance.h"
 #include "ArenaShooterCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 void UCharacterAnimInstance::NativeInitializeAnimation()
 {
@@ -30,4 +31,8 @@ void UCharacterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 
 	bIsAccelerating = ShooterCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0 ? true : false;
 	bIsAiming = ShooterCharacter->IsAiming();
+
+	FRotator AimRotation = ShooterCharacter->GetBaseAimRotation();
+	FRotator MovementRotation = UKismetMathLibrary::MakeRotFromX(ShooterCharacter->GetVelocity());
+	YawOffset = UKismetMathLibrary::NormalizedDeltaRotator(MovementRotation, AimRotation).Yaw;
 }

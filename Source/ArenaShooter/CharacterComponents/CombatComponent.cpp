@@ -1,18 +1,17 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "CombatComponent.h"
 #include "ArenaShooter/Weapon/Weapon.h"
 #include "ArenaShooter/ArenaShooterCharacter.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
 
 
 UCombatComponent::UCombatComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
-
 
 void UCombatComponent::BeginPlay()
 {
@@ -25,11 +24,19 @@ void UCombatComponent::SetAiming(bool bIsAiming)
 	ServerSetAiming(bIsAiming);
 }
 
+void UCombatComponent::OnRep_EquippedWeapon()
+{
+	if (EquippedWeapon && Character)
+	{
+		Character->GetCharacterMovement()->bOrientRotationToMovement = false;
+		Character->bUseControllerRotationYaw = true;
+	}
+}
+
 void UCombatComponent::ServerSetAiming_Implementation(bool bIsAiming)
 {
 	bAiming = bIsAiming;
 }
-
 
 void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -41,6 +48,7 @@ void UCombatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UCombatComponent, bAiming);
+	DOREPLIFETIME(UCombatComponent, EquippedWeapon);
 }
 
 void UCombatComponent::Equip(AWeapon* WeaponToEquip)
@@ -48,6 +56,7 @@ void UCombatComponent::Equip(AWeapon* WeaponToEquip)
 	if (Character == nullptr || WeaponToEquip == nullptr) return;
 
 	EquippedWeapon = WeaponToEquip;
+
 	EquippedWeapon->SetWeaponState(EWeaponState::EWS_Equipped);
 	const USkeletalMeshSocket* HandSocket = Character->GetMesh()->GetSocketByName(FName("hand_rSocket"));
 	if (HandSocket)
@@ -55,5 +64,7 @@ void UCombatComponent::Equip(AWeapon* WeaponToEquip)
 		HandSocket->AttachActor(EquippedWeapon, Character->GetMesh());
 	}
 	EquippedWeapon->SetOwner(Character);
+	Character->GetCharacterMovement()->bOrientRotationToMovement = false;
+	Character->bUseControllerRotationYaw = true;
 }
 

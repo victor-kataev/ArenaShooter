@@ -96,6 +96,8 @@ void AArenaShooterCharacter::ServerEquipButtonPressed_Implementation()
 	if (CombatComp)
 	{
 		CombatComp->Equip(OverlappingWeapon);
+		GEngine->AddOnScreenDebugMessage(13, 14.f, FColor::Red, TEXT("equip button pressed"));
+
 	}
 }
 
