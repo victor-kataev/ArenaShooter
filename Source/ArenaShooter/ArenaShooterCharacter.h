@@ -65,5 +65,6 @@ private:
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
 	bool IsAiming() const;
+	bool IsWeaponEquipped() const;
 };
 

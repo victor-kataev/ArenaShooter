@@ -119,7 +119,12 @@ void AArenaShooterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
 
 bool AArenaShooterCharacter::IsAiming() const
 {
-	return CombatComp && CombatComp->bAiming;
+	return CombatComp && CombatComp->bAiming && CombatComp->EquippedWeapon;
+}
+
+bool AArenaShooterCharacter::IsWeaponEquipped() const
+{
+	return CombatComp && CombatComp->EquippedWeapon;
 }
 
 void AArenaShooterCharacter::Tick(float DeltaTime)
